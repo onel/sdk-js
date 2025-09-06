@@ -36,8 +36,10 @@ let peersToMonitor = {} as PeersToMonitor
  */
 let monitoredConnections = {}
 
+/** Queue for storing events before they can be processed */
 let eventQueue = []
 
+/** Event emitter for peer connection events */
 let peerConnectionEventEmitter = null
 // if the user has provided an options object
 if (typeof window !== "undefined" && typeof window.PeerMetricsOptions === 'object') {
@@ -49,6 +51,9 @@ if (typeof window !== "undefined" && typeof window.PeerMetricsOptions === 'objec
   }
 }
 
+/**
+ * Main PeerMetrics SDK class for monitoring WebRTC connections and collecting statistics
+ */
 export class PeerMetrics {
 
   private user: User
@@ -61,7 +66,8 @@ export class PeerMetrics {
 
   /**
    * Used to initialize the SDK
-   * @param  {Object} options
+   * @param {PeerMetricsConstructor} options - Configuration options for the SDK
+   * @throws {Error} When options are invalid or required parameters are missing
    */
   constructor (options: PeerMetricsConstructor) {
     // check if options are valid
@@ -161,7 +167,9 @@ export class PeerMetrics {
 
   /**
    * Used to initialize the sdk. Accepts an optional object with a conferenceId and conferenceName
-   * @return {Promise}
+   * @param {InitializeObject} [options] - Optional initialization parameters
+   * @returns {Promise<void>} Promise that resolves when initialization is complete
+   * @throws {Error} When initialization fails or browser is incompatible
    */
   async initialize (options?: InitializeObject) {
     let response
@@ -255,7 +263,8 @@ export class PeerMetrics {
 
   /**
    * Wrap native RTCPeerConnection class
-   * @return {boolean} if the wrapping was successful
+   * @returns {boolean} if the wrapping was successful
+   * @throws {Error} When not called in a browser context
    */
   static wrapPeerConnection(): boolean {
     if (typeof window === 'undefined') {
@@ -273,8 +282,9 @@ export class PeerMetrics {
 
   /**
    * Method used to return an app url for a conference or a participant
-   * @param  {Object} options Object containing participantId or conferenceId
-   * @return {string}         The url
+   * @param {GetUrlOptions} options - Object containing participantId or conferenceId
+   * @returns {Promise<string>} The url
+   * @throws {Error} When required parameters are missing or invalid
    */
   static async getPageUrl (options: GetUrlOptions): Promise<string> {
     const {apiKey, userId, conferenceId} = options
@@ -303,6 +313,11 @@ export class PeerMetrics {
     })
   }
 
+  /**
+   * @deprecated Use addConnection() instead
+   * @param {AddConnectionOptions} options - Options for this peer
+   * @returns {Promise} Promise that resolves with connection details
+   */
   async addPeer (options: AddConnectionOptions) {
     console.warn('The addPeer() method has been deprecated, please use addConnection() instead')
     return this.addConnection(options)
@@ -310,7 +325,9 @@ export class PeerMetrics {
 
   /**
    * Used to start monitoring for a peer
-   * @param {Object} options Options for this peer
+   * @param {AddConnectionOptions} options - Options for this peer
+   * @returns {Promise<{connectionId: string}>} Promise that resolves with connection ID
+   * @throws {Error} When SDK is not initialized or parameters are invalid
    */
   async addConnection (options: AddConnectionOptions) {
     if (!this._initialized) {
@@ -369,6 +386,8 @@ export class PeerMetrics {
 
   /**
    * Stop listening for events for a specific connection
+   * @param {RemoveConnectionOptions} options - Options containing connection details to remove
+   * @returns {Promise<void>} Promise that resolves when connection is removed
    */
   async removeConnection (options: RemoveConnectionOptions) {
     let peerId, peer
@@ -404,7 +423,9 @@ export class PeerMetrics {
 
   /**
    * Stop listening for all connections for a specific peer
-   * @param {string} peerId The peer ID to stop listening to
+   * @param {string} peerId - The peer ID to stop listening to
+   * @returns {Promise<void>} Promise that resolves when peer is removed
+   * @throws {Error} When peerId is invalid or peer not found
    */
   async removePeer (peerId: string) {
     if (typeof peerId !== 'string') {
@@ -427,7 +448,9 @@ export class PeerMetrics {
 
   /**
    * Method used to add an integration with different WebRTC SDKs
-   * @param options Options object
+   * @param {SdkIntegrationInterface} options - Options object for SDK integration
+   * @returns {Promise<void>} Promise that resolves when integration is added
+   * @throws {Error} When no integration details are found
    */
   public async addSdkIntegration(options: SdkIntegrationInterface) {
 
@@ -465,7 +488,9 @@ export class PeerMetrics {
 
   /**
    * Add a custom event for this user
-   * @param {Object} options The details for this event
+   * @param {AddEventOptions} options - The details for this event
+   * @returns {Promise<void>} Promise that resolves when event is sent
+   * @throws {Error} When options are invalid or event size limits are exceeded
    */
   async addEvent (options: AddEventOptions) {
     if (typeof options !== 'object') {
@@ -490,6 +515,7 @@ export class PeerMetrics {
 
   /**
    * Called when the current user has muted the mic
+   * @returns {Promise<void>} Promise that resolves when mute event is sent
    */
   async mute () {
     return this.apiWrapper.sendCustomEvent({eventName: 'mute'})
@@ -497,6 +523,7 @@ export class PeerMetrics {
 
   /**
    * Called when the current user has unmuted the mic
+   * @returns {Promise<void>} Promise that resolves when unmute event is sent
    */
   async unmute () {
     return this.apiWrapper.sendCustomEvent({eventName: 'unmute'})
@@ -504,6 +531,7 @@ export class PeerMetrics {
 
   /**
    * Used to stop all event listeners and end current session
+   * @returns {Promise<void>} Promise that resolves when call is ended
    */
   async endCall () {
     this.webrtcStats.destroy()
@@ -521,6 +549,11 @@ export class PeerMetrics {
     return this.apiWrapper.sendEndCall()
   }
 
+  /**
+   * Add page event listeners based on configuration
+   * @param {PageEvents} options - Configuration for which page events to listen to
+   * @private
+   */
   private addPageEventListeners (options: PageEvents) {
     window.addEventListener('beforeunload', this._eventListenersCallbacks.beforeunload)
 
@@ -537,6 +570,11 @@ export class PeerMetrics {
     // }
   }
 
+  /**
+   * Add page visibility event listeners to track tab focus/unfocus
+   * @param {Document & {msHidden?: boolean; webkitHidden?: boolean}} document - Document object with vendor-specific properties
+   * @private
+   */
   private addPageVisibilityListeners (document: Document & {msHidden?: boolean; webkitHidden?: boolean}) {
     // Set the name of the hidden property and the change event for visibility
     let hidden, visibilityChange
@@ -570,6 +608,7 @@ export class PeerMetrics {
   /**
    * Add event listeners for fullScreen events
    * from: https://gist.github.com/samccone/1653975
+   * @private
    */
   private addFullScreenEventListeners () {
     // TODO: add full screen events
@@ -586,19 +625,27 @@ export class PeerMetrics {
    }
   }
 
+  /**
+   * Add listener for media device changes
+   * @private
+   */
   private addMediaDeviceChangeListener () {
     navigator.mediaDevices.addEventListener('devicechange', this._eventListenersCallbacks.devicechange)
   }
 
+  /** Event listener callbacks for various browser events */
   private _eventListenersCallbacks = {
+    /** Handle beforeunload event */
     beforeunload: () => {
       this.apiWrapper.sendLeaveEvent('beforeunload')
     },
 
+    /** Handle unload event */
     unload: () => {
       this.apiWrapper.sendBeaconEvent('unload')
     },
 
+    /** Handle device change event */
     devicechange: () => {
       // first get the new devices
       return this.user.getDevices()
@@ -610,6 +657,11 @@ export class PeerMetrics {
     }
   }
 
+  /**
+   * Initialize the WebRTC stats collection module
+   * @param {number} [getStatsInterval] - Interval for collecting stats in milliseconds
+   * @private
+   */
   private _initializeStatsModule (getStatsInterval = DEFAULT_OPTIONS.getStatsInterval) {
     // initialize the webrtc stats module
     this.webrtcStats = new WebRTCStats({
@@ -627,6 +679,7 @@ export class PeerMetrics {
 
   /**
    * Adds event listener for the stats library
+   * @private
    */
   private _addWebrtcStatsEventListeners () {
     this.webrtcStats
@@ -636,7 +689,12 @@ export class PeerMetrics {
 
   /**
    * Make a request to the api server to signal a new connection
-   * @param {String} connectionId The ID of the connection offered by WebRTCStats
+   * @param {Object} params - Parameters object
+   * @param {string} params.connectionId - The ID of the connection offered by WebRTCStats
+   * @param {AddConnectionOptions} params.options - Connection options
+   * @returns {Promise<void>} Promise that resolves when connection is added
+   * @throws {Error} When connection cannot be added
+   * @private
    */
   private async _sendAddConnectionRequest ({connectionId, options}) {
     let {pc, peerId, peerName, isSfu} = options
@@ -680,6 +738,11 @@ export class PeerMetrics {
     eventQueue.length = 0
   }
 
+  /**
+   * Handle timeline events from the WebRTC stats module
+   * @param {Object} ev - Timeline event object
+   * @private
+   */
   private _handleTimelineEvent (ev) {
     if (ev.peerId) {
       if (peersToMonitor[ev.peerId]) {
@@ -721,8 +784,11 @@ export class PeerMetrics {
     }
   }
 
-  // Handle different types of events
-  // TODO: move this somewhere else
+  /**
+   * Handle getUserMedia events
+   * @param {Object} ev - Event object containing getUserMedia data
+   * @private
+   */
   private _handleGumEvent (ev) {
     /**
      * The data for this event
@@ -772,12 +838,22 @@ export class PeerMetrics {
     this.apiWrapper.saveGetUserMediaEvent(dataToSend)
   }
 
+  /**
+   * Handle WebRTC stats events
+   * @param {Object} ev - Event object containing stats data
+   * @private
+   */
   private _handleStatsEvent (ev) {
     let {data, peerId, connectionId, timeTaken} = ev
 
     this.apiWrapper.sendWebrtcStats({data, peerId, connectionId, timeTaken})
   }
 
+  /**
+   * Handle track events (ontrack, track changes, etc.)
+   * @param {Object} ev - Event object containing track data
+   * @private
+   */
   private _handleTrackEvent (ev) {
     let {data, peerId, connectionId, event} = ev
     let dataToSend = {
@@ -810,6 +886,12 @@ export class PeerMetrics {
     this.apiWrapper.sendTrackEvent(dataToSend)
   }
 
+  /**
+   * Handle connection events (ICE candidates, connection state changes, etc.)
+   * @param {Object} ev - Event object containing connection data
+   * @returns {Promise<void>} Promise that resolves when event is handled
+   * @private
+   */
   private async _handleConnectionEvent (ev) {
     let {event, peerId, connectionId, data, delayed} = ev
     let eventData = data
