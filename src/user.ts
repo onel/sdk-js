@@ -1,6 +1,8 @@
-
 import UAParse from 'ua-parser-js'
 
+/**
+ * Configuration options for creating a User instance
+ */
 interface ConstructorOptions {
   userId: string,
   userName?: string
@@ -17,6 +19,11 @@ export class User {
   public constraints: MediaTrackSupportedConstraints = {}
   public devices: object[] = []
 
+  /**
+   * Creates a new User instance
+   * @param {ConstructorOptions} options - Configuration object containing userId and optional userName
+   * @throws {Error} Throws an error if userId is not provided
+   */
   constructor ({userId, userName}: ConstructorOptions) {
     if (!userId) {
       throw new Error('missing argument userId')
@@ -35,6 +42,10 @@ export class User {
     return {...platform}
   }
 
+  /**
+   * Collects platform information including browser details, constraints, and devices
+   * @return {Promise<Object>} Object containing platform, constraints, and devices information
+   */
   async gatherPlatformInfo () {
     // browser data
     // version, name, OS
@@ -53,10 +64,18 @@ export class User {
     }
   }
 
+  /**
+   * Parses user agent string to extract browser and OS information
+   * @return {Object} Parsed user agent details including browser, engine, OS, and device info
+   */
   getUAdetails () {
     return new UAParse().getResult()
   }
 
+  /**
+   * Retrieves supported media constraints from the browser
+   * @return {MediaTrackSupportedConstraints|Object} Supported constraints object or empty object if not available
+   */
   getContraints () {
     if (!window.navigator || !window.navigator.mediaDevices) {
       return {}
@@ -65,6 +84,10 @@ export class User {
     return window.navigator.mediaDevices.getSupportedConstraints()
   }
 
+  /**
+   * Gathers device information including battery status, CPU cores, memory, and performance data
+   * @return {Promise<Object>} Object containing battery, cores, memory, timing, and navigation information
+   */
   async getDeviceInfo () {
     // @ts-ignore
     let getBattery: any = navigator.getBattery
