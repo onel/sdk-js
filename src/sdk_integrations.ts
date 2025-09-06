@@ -7,10 +7,20 @@ import type {
     WebrtcSDKs,
 } from './types/index'
 
+/**
+ * Manages integrations with various WebRTC SDKs and SFU servers.
+ * Extends EventEmitter to emit 'newConnection' events when peer connections are established.
+ */
 export default class SdkIntegration extends EventEmitter {
     foundIntegration: boolean = false
     webrtcSDK: WebrtcSDKs
 
+    /**
+     * Adds integrations for multiple WebRTC SDKs based on the provided options.
+     * @param {SdkIntegrationInterface} options - Configuration object containing SDK-specific options
+     * @param {EventEmitter | null} peerConnectionEventEmitter - Event emitter for peer connection events
+     * @returns {boolean} True if at least one integration was successfully added
+     */
     addIntegration(options: SdkIntegrationInterface, peerConnectionEventEmitter: null | EventEmitter): boolean {
 
         this.addMediaSoupIntegration(options.mediasoup)
@@ -24,6 +34,10 @@ export default class SdkIntegration extends EventEmitter {
         return this.foundIntegration
     }
 
+    /**
+     * Integrates with MediaSoup by listening to device transport events.
+     * @param {object} options - MediaSoup integration options containing device instance and server details
+     */
     addMediaSoupIntegration(options) {
         if (!options) return
 
@@ -53,6 +67,10 @@ export default class SdkIntegration extends EventEmitter {
         this.foundIntegration = true
     }
 
+    /**
+     * Integrates with Janus by monitoring plugin WebRTC peer connection creation.
+     * @param {object} options - Janus integration options containing plugin instance and server details
+     */
     addJanusIntegration(options) {
         if (!options) return
 
@@ -100,6 +118,10 @@ export default class SdkIntegration extends EventEmitter {
         this.foundIntegration = true
     }
 
+    /**
+     * Integrates with LiveKit by listening to room engine transport creation events.
+     * @param {object} options - LiveKit integration options containing room instance and server details
+     */
     addLivekitIntegration(options) {
         if (!options) return
 
@@ -137,6 +159,10 @@ export default class SdkIntegration extends EventEmitter {
         this.foundIntegration = true
     }
 
+    /**
+     * Integrates with Twilio Video by accessing existing peer connections from the room's signaling manager.
+     * @param {object} options - Twilio Video integration options containing room instance
+     */
     addTwilioVideoIntegration (options) {
         if (!options) return
 
@@ -160,6 +186,11 @@ export default class SdkIntegration extends EventEmitter {
         this.foundIntegration = true
     }
 
+    /**
+     * Integrates with Vonage by listening to peer connection events from the provided event emitter.
+     * @param {boolean} vonage - Flag to enable Vonage integration
+     * @param {EventEmitter} peerConnectionEventEmitter - Event emitter that fires 'newRTCPeerconnection' events
+     */
     addVonageIntegration(vonage: boolean, peerConnectionEventEmitter: EventEmitter) {
         if (!vonage) return
 
@@ -181,6 +212,11 @@ export default class SdkIntegration extends EventEmitter {
         this.foundIntegration = true
     }
 
+    /**
+     * Integrates with Agora by listening to peer connection events from the provided event emitter.
+     * @param {boolean} agora - Flag to enable Agora integration
+     * @param {EventEmitter} peerConnectionEventEmitter - Event emitter that fires 'newRTCPeerconnection' events
+     */
     addAgoraIntegration(agora: boolean, peerConnectionEventEmitter: EventEmitter) {
         if (!agora) return
 
@@ -202,6 +238,11 @@ export default class SdkIntegration extends EventEmitter {
         this.foundIntegration = true
     }
 
+    /**
+     * Integrates with Pion by listening to peer connection events from the provided event emitter.
+     * @param {boolean | object} options - Pion integration options, can be boolean or object with serverId/serverName
+     * @param {EventEmitter} peerConnectionEventEmitter - Event emitter that fires 'newRTCPeerconnection' events
+     */
     addPionIntegration (options: SdkIntegrationInterface['pion'], peerConnectionEventEmitter) {
         if (!options) return
 
@@ -230,9 +271,10 @@ export default class SdkIntegration extends EventEmitter {
     }
 
     /**
-     * Checks if the serverId is valid
-     * @param  {string} serverId [description]
-     * @return {string}          [description]
+     * Validates that the serverId is a string and within length constraints.
+     * @param {string} serverId - The server ID to validate
+     * @returns {string} The validated server ID
+     * @throws {Error} If serverId is not a string or exceeds maximum length
      */
     private checkServerId (serverId: string): string {
         if (typeof serverId !== 'string') {
@@ -245,9 +287,10 @@ export default class SdkIntegration extends EventEmitter {
     }
 
     /**
-     * Used to check if the serverName argument is valid
-     * @param serverName the string to check
-     * @returns the string
+     * Validates and truncates the serverName if it exceeds length constraints.
+     * @param {string} serverName - The server name to validate
+     * @returns {string} The validated and potentially truncated server name
+     * @throws {Error} If serverName is not a string
      */
     private checkServerName(serverName: string): string {
         if (serverName) {
