@@ -44,6 +44,9 @@ let urlsMap = {
   'getPageUrl': '/services/get-url'
 }
 
+/**
+ * Wrapper class for API communication with the backend service
+ */
 export class ApiWrapper {
   private apiKey: string
   private apiRoot: string
@@ -58,6 +61,14 @@ export class ApiWrapper {
   private connectionEvents: Array<[ConnectionEventData, DOMHighResTimeStamp]> = []
   private connectionTimeout: number | null = null
 
+  /**
+   * Creates a new ApiWrapper instance and configures the HTTP client
+   * @param {Object} options - Configuration options for the API wrapper
+   * @param {string} options.apiKey - API key for authentication
+   * @param {string} options.apiRoot - Base URL for the API
+   * @param {User} options.user - User instance containing user details
+   * @param {boolean} options.mockRequests - Whether to mock requests for testing
+   */
   constructor (options) {
     this.apiKey = options.apiKey
     this.apiRoot = options.apiRoot
@@ -80,11 +91,10 @@ export class ApiWrapper {
       // .catcher(405, this._handleFailedRequest)
   }
 
-  /*
-   * Checks to see if the apiKey is valid
-   * and if the account has enough ...
-   * initialiaze the session
-   * @return {Promise} The fetch promise
+  /**
+   * Initializes the API session by validating the API key and setting up the session
+   * @param {ApiInitializeData} data - Initialization data containing conference details
+   * @returns {Promise<Response>} Promise that resolves to the initialization response
    */
   async initialize (data: ApiInitializeData): Promise<Response> {
     let toSend = {...data} as any
@@ -118,6 +128,11 @@ export class ApiWrapper {
     })
   }
 
+  /**
+   * Retrieves the page URL from the server
+   * @param {Object} data - Request data for URL retrieval
+   * @returns {Promise<string>} Promise that resolves to the page URL
+   */
   async getPageUrl(data) {
     return this.makeRequest({
       path: urlsMap['getPageUrl'],
@@ -127,6 +142,11 @@ export class ApiWrapper {
     })
   }
 
+  /**
+   * Creates a new session on the server
+   * @param {Object} data - Session creation data
+   * @returns {Promise} Promise that resolves when the session is created
+   */
   createSession(data) {
     return this.makeRequest({
       path: urlsMap['session'],
@@ -139,8 +159,9 @@ export class ApiWrapper {
   }
 
   /**
-   * Used to save initial data about the current user
-   * @return {Promise} The fetch promise
+   * Updates session details on the server
+   * @param {Object} data - Session details to update
+   * @returns {Promise} Promise that resolves when the session details are updated
    */
   addSessionDetails (data) {
     return this.makeRequest({
@@ -150,6 +171,11 @@ export class ApiWrapper {
     })
   }
 
+  /**
+   * Sends a page event to the server
+   * @param {Object} data - Page event data
+   * @returns {Promise} Promise that resolves when the event is sent
+   */
   sendPageEvent (data) {
     return this.makeRequest({
       path: urlsMap['events-browser'],
@@ -157,6 +183,11 @@ export class ApiWrapper {
     })
   }
 
+  /**
+   * Sends a custom event to the server
+   * @param {Object} data - Custom event data
+   * @returns {Promise} Promise that resolves when the event is sent
+   */
   sendCustomEvent (data) {
     return this.makeRequest({
       path: urlsMap['events-browser'],
@@ -167,6 +198,11 @@ export class ApiWrapper {
     })
   }
 
+  /**
+   * Sends media device change event to the server
+   * @param {Object[]} devices - Array of media devices
+   * @returns {Promise} Promise that resolves when the event is sent
+   */
   sendMediaDeviceChange (devices) {
     return this.makeRequest({
       path: urlsMap['events-browser'],
@@ -177,6 +213,11 @@ export class ApiWrapper {
     })
   }
 
+  /**
+   * Saves getUserMedia event data to the server
+   * @param {Object} data - getUserMedia event data
+   * @returns {Promise} Promise that resolves when the event is saved
+   */
   saveGetUserMediaEvent (data) {
     return this.makeRequest({
       path: urlsMap['events-getusermedia'],
@@ -187,6 +228,11 @@ export class ApiWrapper {
     })
   }
 
+  /**
+   * Sends connection event data, either immediately or batched based on configuration
+   * @param {ConnectionEventData} data - Connection event data
+   * @returns {Promise|void} Promise if sent immediately, void if batched
+   */
   sendConnectionEvent (data: ConnectionEventData) {
     if (this.batchConnectionEvents === false) {
       return this._sendConnectionEvent(data)
@@ -203,6 +249,10 @@ export class ApiWrapper {
     this.connectionEvents.push([data, Date.now()])
   }
 
+  /**
+   * Sends all batched connection events to the server
+   * @returns {Promise|void} Promise that resolves when events are sent
+   */
   sendBatchConnectionEvents () {
     let events = Array.from(this.connectionEvents)
     this.connectionEvents = []
@@ -215,6 +265,12 @@ export class ApiWrapper {
     }
   }
 
+  /**
+   * Handles sending a single connection event with time delta calculation
+   * @private
+   * @param {Array} eventData - Tuple containing connection event data and timestamp
+   * @returns {Promise} Promise that resolves when the event is sent
+   */
   private _handleSingleConnectionEvent ([ev, timestamp]: [ConnectionEventData, DOMHighResTimeStamp]) {
     let now = Date.now()
     let { eventName, peerId, data } = ev
@@ -227,6 +283,12 @@ export class ApiWrapper {
     })
   }
 
+  /**
+   * Handles sending multiple connection events as a batch with time delta calculations
+   * @private
+   * @param {Array} events - Array of tuples containing connection event data and timestamps
+   * @returns {Promise} Promise that resolves when the batch is sent
+   */
   private _handleBatchConnectionEvents (events: Array<[ConnectionEventData, DOMHighResTimeStamp]>) {
     let now = Date.now()
 
@@ -245,6 +307,12 @@ export class ApiWrapper {
     return this._sendBatchConnectionEvents(data)
   }
 
+  /**
+   * Sends a single connection event to the server
+   * @private
+   * @param {Object} data - Connection event data
+   * @returns {Promise} Promise that resolves when the event is sent
+   */
   private _sendConnectionEvent (data) {
     return this.makeRequest({
       path: urlsMap['connection'],
@@ -252,6 +320,12 @@ export class ApiWrapper {
     })
   }
 
+  /**
+   * Sends batched connection events to the server
+   * @private
+   * @param {Object[]} data - Array of connection event data
+   * @returns {Promise} Promise that resolves when the batch is sent
+   */
   private _sendBatchConnectionEvents (data) {
     return this.makeRequest({
       path: urlsMap['batch-connection'],
@@ -259,6 +333,11 @@ export class ApiWrapper {
     })
   }
 
+  /**
+   * Sends WebRTC statistics data to the server with retry capability
+   * @param {Object} data - WebRTC stats data
+   * @returns {Promise} Promise that resolves when the stats are sent
+   */
   sendWebrtcStats (data) {
     return this.makeRequest({
       path: urlsMap['stats'],
@@ -267,6 +346,12 @@ export class ApiWrapper {
     })
   }
 
+  /**
+   * Sends track event data using appropriate HTTP method based on event type
+   * @param {Object} data - Track event data
+   * @param {string} data.event - Event type that determines HTTP method
+   * @returns {Promise} Promise that resolves when the event is sent
+   */
   sendTrackEvent (data) {
     const method = data.event === 'ontrack' ? 'post' : 'put'
     return this.makeRequest({
@@ -278,7 +363,9 @@ export class ApiWrapper {
   }
 
   /**
-   * This is a special method because it uses beacons instead of fetch
+   * Sends leave event using keepalive option for reliable delivery during page unload
+   * @param {string} event - Leave event name
+   * @returns {void}
    */
   sendLeaveEvent (event) {
     let path = urlsMap['events-browser']
@@ -294,6 +381,11 @@ export class ApiWrapper {
     externalApi.url(path).options({keepalive: true}).post(data)
   }
 
+  /**
+   * Sends event using navigator.sendBeacon for reliable delivery during page unload
+   * @param {string} event - Event name to send
+   * @returns {void}
+   */
   sendBeaconEvent (event) {
     let url = this._createUrl(urlsMap['events-browser'])
     let data = JSON.stringify({
@@ -307,6 +399,10 @@ export class ApiWrapper {
     }
   }
 
+  /**
+   * Sends end call event to the server with retry capability
+   * @returns {Promise} Promise that resolves when the event is sent
+   */
   sendEndCall () {
     return this.makeRequest({
       path: urlsMap['events-browser'],
@@ -317,6 +413,12 @@ export class ApiWrapper {
     })
   }
 
+  /**
+   * Makes HTTP request to the API with error handling and retry logic
+   * @private
+   * @param {MakeRequest} options - Request configuration options
+   * @returns {Promise} Promise that resolves to the response data
+   */
   private async makeRequest (options: MakeRequest) {
     // we just need the path, the base url is set at initialization
     let {path, timestamp, data, retry = false} = options
@@ -390,6 +492,12 @@ export class ApiWrapper {
       })
   }
 
+  /**
+   * Handles successful API responses by logging and returning the response
+   * @private
+   * @param {Object} response - API response data
+   * @returns {Object} The response data
+   */
   private async _handleResponse (response) {
     if (response) {
       log(response)
@@ -399,8 +507,13 @@ export class ApiWrapper {
   }
 
   /**
-   * Used to handle a failed fetch request
-   * @param  {Object} arg
+   * Handles failed API requests with exponential backoff retry logic
+   * @private
+   * @param {Object} arg - Failed request parameters
+   * @param {Object} arg.response - Failed response object
+   * @param {DOMHighResTimeStamp} arg.timestamp - Original request timestamp
+   * @param {MakeRequest} arg.options - Original request options
+   * @returns {Promise} Promise that resolves to retry result or rejects with error
    */
   private async _handleFailedRequest (arg) {
     let {response, timestamp, options} = arg
@@ -437,6 +550,12 @@ export class ApiWrapper {
     return Promise.reject(body)
   }
 
+  /**
+   * Creates a complete URL by combining the API root with the given path
+   * @private
+   * @param {string} path - URL path to append to the API root
+   * @returns {string} Complete URL
+   */
   private _createUrl (path = '/') {
     return `${this.apiRoot}${path}`
   }
